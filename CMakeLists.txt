@@ -1,0 +1,25 @@
+set(UTILS_PROJECT "Utils")
+
+file(
+    GLOB_RECURSE UTILS_CODE_LIST
+    LIST_DIRECTORIES false
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/*.c*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/utils/*.h*"
+    "${CMAKE_CURRENT_SOURCE_DIR}/include/utils/*.inl"
+)
+
+add_library(${UTILS_PROJECT} SHARED ${UTILS_CODE_LIST})
+
+target_compile_features(${UTILS_PROJECT} PRIVATE cxx_std_17)
+target_include_directories(${UTILS_PROJECT} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+foreach(CODE_FILE IN ITEMS ${UTILS_CODE_LIST})
+    get_filename_component(CODE_FILE_PATH "${CODE_FILE}" PATH)
+    file(RELATIVE_PATH CODE_FILE_RELATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" "${CODE_FILE_PATH}")
+    string(REPLACE "\\" "/" GROUP_PATH "${CODE_FILE_RELATIVE_PATH}")
+    file(RELATIVE_PATH EXTERNAL_INCLUDE_RELATIVE_PATH "${CMAKE_CURRENT_SOURCE_DIR}" "${ENGINE_EXTERNAL_INCLUDE_DIR}/")
+    string(REPLACE ${EXTERNAL_INCLUDE_RELATIVE_PATH} "" GROUP_PATH "${GROUP_PATH}")
+    string(REPLACE "src" "" GROUP_PATH "${GROUP_PATH}")
+    string(REPLACE "include/utils" "" GROUP_PATH "${GROUP_PATH}")
+    source_group("${GROUP_PATH}" FILES "${CODE_FILE}")
+endforeach()
