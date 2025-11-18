@@ -2,17 +2,19 @@
 
 namespace Utils
 {
-    std::default_random_engine Random::m_generator;
-
     int Random::GetInt(int min, int max)
     {
+        std::random_device r;
+        std::default_random_engine generator(r());
         std::uniform_int_distribution<int> distribution(min, max);
-        return distribution(m_generator);
+        return distribution(generator);
     }
 
     float Random::GetFloat(float min, float max)
     {
+        std::random_device r;
+        std::default_random_engine generator(r());
         std::uniform_real_distribution<float> distribution(min, max);
-        return distribution(m_generator);
+        return distribution(generator);
     }
 }
