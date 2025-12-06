@@ -10,7 +10,7 @@ file(
 
 add_library(${UTILS_PROJECT} SHARED ${UTILS_CODE_LIST})
 
-target_compile_features(${UTILS_PROJECT} PRIVATE cxx_std_17)
+target_compile_features(${UTILS_PROJECT} PRIVATE cxx_std_20)
 target_include_directories(${UTILS_PROJECT} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 foreach(CODE_FILE IN ITEMS ${UTILS_CODE_LIST})
