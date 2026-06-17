@@ -1,0 +1,13 @@
+CompileFlags:
+  Add:
+    - -std=c++23
+    - -Wall
+    - -Wextra
+    - "-I./include"
+  Compiler: clang++
+
+Diagnostics:
+  ClangTidy:
+    Add: [modernize-*, performance-*, bugprone-*]
+    Remove: [modernize-use-trailing-return-type]
+    

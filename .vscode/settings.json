@@ -1,0 +1,17 @@
+{
+    "C_Cpp.formatting": "clangFormat",
+    "C_Cpp.clang_format_style": "file",
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: LLVM, Standard: c++23 }",
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "[cpp]": {
+        "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+        "editor.formatOnSave": true
+    },
+    "clangd.arguments": [
+        "--compile-commands-dir=build/debug",
+        "--enable-config"
+    ],
+    "clangd.fallbackFlags": [
+        "-std=c++23"
+    ]
+}

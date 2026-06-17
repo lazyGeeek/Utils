@@ -28,8 +28,6 @@ x86/
 bld/
 [Bb]in/
 [Oo]bj/
-[Ll]og/
-[Ll]ogs/
 
 # Visual Studio 2015/2017 cache/options directory
 .vs/
@@ -350,7 +348,6 @@ MigrationBackup/
 .ionide/
 
 # Custom ignore rules
-.vscode
 !thirdparty/**
 thirdparty/bins/
 thirdparty/include/
@@ -358,4 +355,5 @@ thirdparty/libs/
 thirdparty/temp/
 !src/**
 build/
+bin/
 !include/**

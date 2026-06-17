@@ -1,0 +1,61 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake: Configure Debug",
+            "type": "shell",
+            "command": "cmake --preset debug",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Build Debug",
+            "type": "shell",
+            "command": "cmake --build --preset debug",
+            "dependsOn": "CMake: Configure Debug",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Configure Release",
+            "type": "shell",
+            "command": "cmake --preset release",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Build Release",
+            "type": "shell",
+            "command": "cmake --build --preset release",
+            "dependsOn": "CMake: Configure Release",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Configure Tests",
+            "type": "shell",
+            "command": "cmake --preset tests",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: Build Tests",
+            "type": "shell",
+            "command": "cmake --build --preset tests --target utils_tests",
+            "dependsOn": "CMake: Configure Tests",
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Unit Tests: Run Tests",
+            "type": "shell",
+            "command": "ctest --preset tests",
+            "dependsOn": "CMake: Configure Tests",
+            "group": "build",
+            "problemMatcher": []
+        }
+    ]
+}
