@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <atomic>
 #include <string>
 #include <thread>
 #include <vector>
@@ -90,30 +89,35 @@ TEST(EventDispatcherTest, RemoveAllListenersClearsCallbacks)
 
 TEST(EventDispatcherTest, InvokeIsSafeWithConcurrentAddAndRemove)
 {
-    EventDispatcherAccess<int> dispatcher;
-    std::atomic<int> invokeCount { 0 };
+    EventDispatcherAccess dispatcher;
+    int invokeCount = 0;
 
-    dispatcher.AddListener([&](int) { invokeCount.fetch_add(1); });
+    auto mainID = dispatcher.AddListener([&]() { invokeCount++; });
 
     std::vector<std::thread> threads;
     threads.reserve(8);
 
     for (int i = 0; i < 4; ++i) {
         threads.emplace_back([&] {
-            for (int j = 0; j < 50; ++j)
-                dispatcher.AddListener([](int) { });
+            for (int j = 1; j <= 50; ++j)
+                dispatcher.AddListener([]() { });
         });
+
         threads.emplace_back([&] {
-            for (int j = 0; j < 50; ++j)
-                dispatcher.RemoveListener(static_cast<ListenerID>(j));
+            for (int j = 1; j <= 50; ++j) {
+                ListenerID id = static_cast<ListenerID>(j);
+                if (id != mainID)
+                    dispatcher.RemoveListener(id);
+            }
         });
     }
 
     for (int i = 0; i < 100; ++i)
-        dispatcher.Invoke(0);
+        dispatcher.Invoke();
 
     for (auto& thread : threads)
         thread.join();
 
-    EXPECT_GE(invokeCount.load(), 100);
+    EXPECT_GE(invokeCount, 100);
 }
+

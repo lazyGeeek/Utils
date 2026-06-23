@@ -1,47 +1,80 @@
 #pragma once
-#ifndef UTILS_LOGS_LOGGER_HPP_
-#define UTILS_LOGS_LOGGER_HPP_
 
+#include "utils/logs/log_level.hpp"
+#include "utils/non_copyable.hpp"
+
+#include <atomic>
+#include <filesystem>
+#include <format>
+#include <fstream>
+#include <functional>
+#include <mutex>
 #include <string>
-
-#include "log_level.hpp"
-#include "utils/eventing/event.hpp"
-
-#define LOG_DEBUG(format, ...)   Utils::Logs::Logger::Debug(format, ##__VA_ARGS__)
-#define LOG_INFO(format, ...)    Utils::Logs::Logger::Info(format, ##__VA_ARGS__)
-#define LOG_WARNING(format, ...) Utils::Logs::Logger::Warning(format, ##__VA_ARGS__)
-#define LOG_ERROR(format, ...)   Utils::Logs::Logger::Error(format, ##__VA_ARGS__)
+#include <string_view>
+#include <utility>
 
 namespace Utils::Logs
 {
-    class Logger
+    class Logger : public NonCopyable
     {
     public:
-        Logger() = delete;
+        Logger() = default;
+        ~Logger() override;
 
-        Logger(const Logger& other)             = delete;
-        Logger(Logger&& other)                  = delete;
-        Logger& operator=(const Logger& other)  = delete;
-        Logger& operator=(const Logger&& other) = delete;
+        // Configure sinks
+        void EnableConsole(bool console = true) noexcept;
 
-        static void Debug(char const* const format, ...);
-        static void Info(char const* const format, ...);
-        static void Warning(char const* const format, ...);
-        static void Error(char const* const format, ...);
+        // Configure file sink (opens in append mode). Returns false on
+        // failure.
+        bool SetFile(std::filesystem::path path, bool append = true);
+        void SetCallback(std::function<void(std::string_view)> callback);
+        void SetMinLogLevel(ELogLevel minLevel) noexcept;
 
-        static inline Utils::Eventing::Event<ELogLevel, const std::string&> LogMessageReceived;
+        template <class... Args>
+        void Log(ELogLevel level, std::string_view fmt, Args&&... args)
+        {
+            if (level < m_minLevel.load(std::memory_order_relaxed))
+                return;
+
+            auto msg = std::vformat(fmt, std::make_format_args(args...));
+
+            writeRecord(level, std::move(msg));
+        }
+
+        template <class... Args>
+        void Info(std::string_view fmt, Args&&... args)
+        {
+            Log(ELogLevel::Info, fmt, std::forward<Args>(args)...);
+        }
+
+        template <class... Args>
+        void Debug(std::string_view fmt, Args&&... args)
+        {
+            Log(ELogLevel::Debug, fmt, std::forward<Args>(args)...);
+        }
+
+        template <class... Args>
+        void Warning(std::string_view fmt, Args&&... args)
+        {
+            Log(ELogLevel::Warning, fmt, std::forward<Args>(args)...);
+        }
+
+        template <class... Args>
+        void Error(std::string_view fmt, Args&&... args)
+        {
+            Log(ELogLevel::Error, fmt, std::forward<Args>(args)...);
+        }
 
     private:
-        static std::string parseArgs(char const* const format, va_list& args);
+        static std::string nowIso8601();
+        void writeRecord(ELogLevel level, std::string&& message);
 
-        static std::string getLogLevelOutput(ELogLevel logLevel = ELogLevel::Debug);
-        static void printLog(const std::string& message, ELogLevel logLevel = ELogLevel::Info);
+        std::mutex m_mutex;
+        std::ofstream m_fileStream;
+        std::filesystem::path m_filePath;
+        bool m_console = true;
 
-        static const std::string DEBUG;
-        static const std::string RED;
-        static const std::string YELLOW;
-        static const std::string CYAN;
+        std::function<void(std::string_view)> m_callback;
+        std::atomic<ELogLevel> m_minLevel { ELogLevel::Info };
     };
-}
-
-#endif // UTILS_LOGS_LOGGER_HPP_
+} // namespace Utils::Logs

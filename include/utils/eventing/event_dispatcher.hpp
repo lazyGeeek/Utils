@@ -14,15 +14,15 @@ namespace Utils::Eventing
     class EventDispatcher
     {
     public:
-        using Callback = std::function<void(ArgTypes...)>;
+        using Callback = std::function<void(ArgTypes&&...)>;
 
         virtual ~EventDispatcher() = default;
 
-        virtual ListenerID AddListener(const Callback& callback)
+        virtual ListenerID AddListener(Callback callback)
         {
             std::lock_guard<std::mutex> lk(m_mutex);
             ListenerID listenerID = m_availableListenerID++;
-            m_callbacks.emplace(listenerID, callback);
+            m_callbacks[listenerID] = std::move(callback);
             return listenerID;
         }
 
@@ -45,19 +45,19 @@ namespace Utils::Eventing
             return m_callbacks.size();
         }
 
-        virtual void Invoke(ArgTypes... args)
+        virtual void Invoke(ArgTypes&&... args)
         {
             std::vector<Callback> callbacks;
             {
                 std::lock_guard<std::mutex> lk(m_mutex);
                 callbacks.reserve(m_callbacks.size());
 
-                for (const auto& cb : m_callbacks)
+                for (auto& cb : m_callbacks)
                     callbacks.push_back(cb.second);
             }
 
-            for (const auto& fc : callbacks)
-                fc(args...);
+            for (auto& fc : callbacks)
+                fc(std::forward<ArgTypes>(args)...);
         }
 
     private:
@@ -66,3 +66,4 @@ namespace Utils::Eventing
         std::mutex m_mutex;
     };
 } // namespace Utils::Eventing
+

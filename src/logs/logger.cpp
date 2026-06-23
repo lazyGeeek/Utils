@@ -1,105 +1,109 @@
 #include "utils/logs/logger.hpp"
-#include "utils/time/date.hpp"
 
-#include <cstdarg>
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 #include <iostream>
-#include <string>
+#include <sstream>
 
 namespace Utils::Logs
 {
-    const std::string Logger::DEBUG   = "\033[0m";
-    const std::string Logger::CYAN    = "\033[36m";
-    const std::string Logger::YELLOW  = "\033[33m";
-    const std::string Logger::RED     = "\033[31m";
-
-    void Logger::Debug(char const* const format, ...)
+    Logger::~Logger()
     {
-        va_list args;
-        va_start(args, format);
+        std::lock_guard<std::mutex> lock(m_mutex);
 
-        std::string message = parseArgs(format, args);
-        printLog(message, ELogLevel::Debug);
-        
-        va_end(args);
-
-        LogMessageReceived.Invoke(ELogLevel::Debug, message);
+        if (m_fileStream.is_open())
+            m_fileStream.close();
     }
 
-    void Logger::Info(char const* const format, ...) {
-        va_list args;
-        va_start(args, format);
-
-        std::string message = parseArgs(format, args);
-        printLog(message, ELogLevel::Info);
-
-        va_end(args);
-
-        LogMessageReceived.Invoke(ELogLevel::Info, message);
-    }
-
-    void Logger::Warning(char const* const format, ...) {
-        va_list args;
-        va_start(args, format);
-
-        std::string message = parseArgs(format, args);
-        printLog(message, ELogLevel::Warning);
-        
-        va_end(args);
-
-        LogMessageReceived.Invoke(ELogLevel::Warning, message);
-    }
-
-    void Logger::Error(char const* const format, ...)
+    void Logger::EnableConsole(bool console) noexcept
     {
-        va_list args;
-        va_start(args, format);
-
-        std::string message = parseArgs(format, args);    
-        printLog(message, ELogLevel::Error);
-    
-        va_end(args);
-    
-        LogMessageReceived.Invoke(ELogLevel::Error, message);
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_console = console;
     }
 
-    std::string Logger::parseArgs(char const* const format, va_list& args)
+    bool Logger::SetFile(std::filesystem::path path, bool append)
     {
-        va_list copy;
-        va_copy(copy, args);
+        std::lock_guard<std::mutex> lock(m_mutex);
+        std::ofstream tmp;
+        tmp.open(path,
+                 std::ios::out | (append ? std::ios::app : std::ios::trunc));
+        if (!tmp)
+            return false;
 
-        int size = vsnprintf(nullptr, 0, format, copy);
-        
-        if (size <= 0)
-        {
-            va_end(copy);
-            return "";
+        m_fileStream.swap(tmp);
+        m_filePath = std::move(path);
+
+        return true;
+    }
+
+    void Logger::SetCallback(std::function<void(std::string_view)> callback)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+        m_callback = std::move(callback);
+    }
+
+    void Logger::SetMinLogLevel(ELogLevel minLevel) noexcept
+    {
+        m_minLevel.store(minLevel, std::memory_order_relaxed);
+    }
+
+    std::string Logger::nowIso8601()
+    {
+        const auto now = std::chrono::system_clock::now();
+
+        // Convert to milliseconds since epoch
+        auto msSinceEpoch =
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                now.time_since_epoch());
+
+        // Get the milliseconds component (0-999)
+        auto ms = msSinceEpoch % std::chrono::milliseconds(1000);
+
+        // Truncate to seconds for the main time part
+        auto secondsSinceEpoch =
+            std::chrono::duration_cast<std::chrono::seconds>(msSinceEpoch);
+
+        // Format the date and time as UTC
+        std::time_t timestamp = secondsSinceEpoch.count();
+        std::tm buf {};
+#ifdef _WIN32
+        gmtime_s(&buf, &timestamp);
+#else
+        gmtime_r(&timestamp, &buf);
+#endif
+
+        std::ostringstream ss;
+        ss << std::put_time(&buf, "%Y-%m-%d %H:%M:%S");
+        ss << '.' << std::setw(3) << std::setfill('0') << ms.count();
+
+        return ss.str();
+    }
+
+    void Logger::writeRecord(ELogLevel level, std::string&& message)
+    {
+        std::lock_guard<std::mutex> lock(m_mutex);
+
+        const auto timestamp = nowIso8601();
+        const auto lvl = LogName(level);
+        const auto color = LogColor(level);
+
+        auto line = std::format("[{}] [{}] {}", timestamp, lvl, message);
+
+        // Acquire sink mutex and then write to sinks.
+        if (m_callback)
+            m_callback(line);
+
+        if (m_console) {
+            auto consoleLine =
+                std::format("{}{}{}\n", color, line, LogColor(ELogLevel::Info));
+            std::cout << consoleLine;
         }
-        
-        std::string buffer(size + 1, '\0');
-        vsnprintf(&buffer[0], size + 1, format, args);
-        
-        va_end(copy);
-        return buffer;
-    }
 
-    void Logger::printLog(const std::string& message, ELogLevel logLevel)
-    {
-        std::cout << getLogLevelOutput(logLevel)
-                  << "[" << Utils::Time::Date::GetDateAndTime() << "] "
-                  << message << DEBUG << std::endl;
-    }
-
-    std::string Logger::getLogLevelOutput(ELogLevel logLevel)
-    {
-        switch (logLevel)
-        {
-            case ELogLevel::Debug:   return "";
-            case ELogLevel::Info:    return CYAN +   "[Info] ";
-            case ELogLevel::Warning: return YELLOW + "[Warning] ";
-            case ELogLevel::Error:   return RED +    "[Error] ";
-            default:                 return "[Uknown] ";
+        if (m_fileStream.is_open()) {
+            m_fileStream << line << '\n';
+            m_fileStream.flush();
         }
-
-        return "[Unknown] ";
     }
-}
+
+} // namespace Utils::Logs
