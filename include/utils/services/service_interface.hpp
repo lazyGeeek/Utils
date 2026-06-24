@@ -1,8 +1,4 @@
 #pragma once
-#ifndef UTILS_SERVICES_SERVICE_INTERFACE_HPP_
-#define UTILS_SERVICES_SERVICE_INTERFACE_HPP_
-
-#include <typeindex>
 
 namespace Utils::Services
 {
@@ -13,4 +9,3 @@ namespace Utils::Services
     };
 }
 
-#endif // UTILS_SERVICES_SERVICE_INTERFACE_HPP_

@@ -1,57 +1,53 @@
 #pragma once
-#ifndef UTILS_SERVICES_SERVICE_LOCATOR_HPP_
-#define UTILS_SERVICES_SERVICE_LOCATOR_HPP_
 
-#include <iostream>
 #include <memory>
-#include <unordered_map>
 #include <stdexcept>
+#include <typeindex>
+#include <unordered_map>
 
 #include "service_interface.hpp"
 
 namespace Utils::Services
 {
+    template <class T>
+    concept Service = std::is_base_of_v<IService, T>;
+
     class ServiceLocator
     {
     public:
-        template<typename T, typename... Args>
-        static T& Provide(Args&&... args)
+        template <Service S, class... Args>
+        static S& Provide(Args&&... args)
         {
-            static_assert(std::is_base_of<IService, T>::value, "T must inherit from IService");
+            const std::type_index key { typeid(S) };
 
-            size_t hash = typeid(T).hash_code();
+            auto [it, inserted] = m_services.try_emplace(
+                key, std::make_shared<S>(std::forward<Args>(args)...));
 
-            if (!m_services.count(hash))
-                m_services.emplace(hash, std::make_shared<T>(args...));
-
-            return static_cast<T&>(*m_services.find(hash)->second.get());
+            return static_cast<S&>(*it->second);
         }
 
-        template<typename T>
-        static T& Get()
+        template <Service S>
+        static S& Get()
         {
-            static_assert(std::is_base_of<IService, T>::value, "T must inherit from IService");
+            const std::type_index key { typeid(S) };
 
-            if (!m_services.count(typeid(T).hash_code()))
+            auto it = m_services.find(key);
+            if (it == m_services.end())
                 throw std::runtime_error("Service does not exist");
 
-            return static_cast<T&>(*m_services[typeid(T).hash_code()].get());
+            return static_cast<S&>(*it->second);
         }
 
-        template<typename T>
+        template <Service S>
         static void UnregisterService()
         {
-            static_assert(std::is_base_of<IService, T>::value, "T must inherit from IService");
-
-            size_t hash = typeid(T).hash_code();
-
-            if (m_services.count(hash))
-                m_services.erase(hash);
+            m_services.erase(typeid(S));
         }
 
-        private:
-            static inline std::unordered_map<size_t, std::shared_ptr<IService>> m_services;
+    private:
+        static inline std::unordered_map<std::type_index,
+                                         std::shared_ptr<IService>>
+            m_services;
     };
-}
+} // namespace Utils::Services
 
-#endif // UTILS_SERVICES_SERVICE_LOCATOR_HPP_
