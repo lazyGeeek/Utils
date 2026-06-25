@@ -1,39 +1,27 @@
 #pragma once
-#ifndef UTILS_TIME_GLOBAL_CLOCK_HPP_
-#define UTILS_TIME_GLOBAL_CLOCK_HPP_
-
-#include <chrono>
-
+#include "utils/non_copyable.hpp"
 #include "utils/services/service_interface.hpp"
+#include "utils/time/utils.hpp"
 
 namespace Utils::Time
 {
-    class GlobalClock : public Services::IService
+    class GlobalClock : public NonCopyable, public Services::IService
     {
-        using Microsecs = std::chrono::microseconds;
-        using SteadyClock = std::chrono::steady_clock;
-
     public:
         GlobalClock();
-        virtual ~GlobalClock() = default;
-
-        GlobalClock(const GlobalClock& other)             = delete;
-        GlobalClock(GlobalClock&& other)                  = delete;
-        GlobalClock& operator=(const GlobalClock& other)  = delete;
-        GlobalClock& operator=(const GlobalClock&& other) = delete;
+        ~GlobalClock() override = default;
 
         void Start();
         void UpdateDelta();
 
-        double GetDeltaMS();
-        double GetDurationMS();
+        double GetDeltaMillisec();
+        double GetDurationMillisec();
 
     private:
         SteadyClock::time_point m_start;
         SteadyClock::time_point m_lastDeltaPoint;
 
-        std::chrono::duration<double> m_delta;
+        Duration m_delta { 0.0 };
     };
-}
+} // namespace Utils::Time
 
-#endif // UTILS_TIME_GLOBAL_CLOCK_HPP_

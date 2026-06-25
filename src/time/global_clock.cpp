@@ -4,8 +4,7 @@ namespace Utils::Time
 {
     GlobalClock::GlobalClock()
         : m_start { SteadyClock::now() },
-          m_lastDeltaPoint{ SteadyClock::now() },
-          m_delta{ std::chrono::duration<double>(0.0) }
+          m_lastDeltaPoint { SteadyClock::now() }
     { }
 
     void GlobalClock::Start()
@@ -13,20 +12,21 @@ namespace Utils::Time
         m_start = SteadyClock::now();
     }
 
-    void GlobalClock:: UpdateDelta()
+    void GlobalClock::UpdateDelta()
     {
         SteadyClock::time_point now = SteadyClock::now();
         m_delta = now - m_lastDeltaPoint;
         m_lastDeltaPoint = now;
     }
 
-    double GlobalClock::GetDeltaMS()
+    double GlobalClock::GetDeltaMillisec()
     {
-        return std::chrono::duration_cast<Microsecs>(m_delta).count() / 1000.0;
+        return DurationCast<Millisecs>(m_delta).count();
     }
 
-    double GlobalClock::GetDurationMS()
+    double GlobalClock::GetDurationMillisec()
     {
-        return std::chrono::duration_cast<Microsecs>(SteadyClock::now() - m_start).count() / 1000.0;
+        return DurationCast<Millisecs>(SteadyClock::now() - m_start).count();
     }
-}
+} // namespace Utils::Time
+

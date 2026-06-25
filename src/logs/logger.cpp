@@ -1,10 +1,7 @@
 #include "utils/logs/logger.hpp"
+#include "utils/time/date.hpp"
 
-#include <chrono>
-#include <ctime>
-#include <iomanip>
 #include <iostream>
-#include <sstream>
 
 namespace Utils::Logs
 {
@@ -48,43 +45,11 @@ namespace Utils::Logs
         m_minLevel.store(minLevel, std::memory_order_relaxed);
     }
 
-    std::string Logger::nowIso8601()
-    {
-        const auto now = std::chrono::system_clock::now();
-
-        // Convert to milliseconds since epoch
-        auto msSinceEpoch =
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                now.time_since_epoch());
-
-        // Get the milliseconds component (0-999)
-        auto ms = msSinceEpoch % std::chrono::milliseconds(1000);
-
-        // Truncate to seconds for the main time part
-        auto secondsSinceEpoch =
-            std::chrono::duration_cast<std::chrono::seconds>(msSinceEpoch);
-
-        // Format the date and time as UTC
-        std::time_t timestamp = secondsSinceEpoch.count();
-        std::tm buf {};
-#ifdef _WIN32
-        gmtime_s(&buf, &timestamp);
-#else
-        gmtime_r(&timestamp, &buf);
-#endif
-
-        std::ostringstream ss;
-        ss << std::put_time(&buf, "%Y-%m-%d %H:%M:%S");
-        ss << '.' << std::setw(3) << std::setfill('0') << ms.count();
-
-        return ss.str();
-    }
-
     void Logger::writeRecord(ELogLevel level, std::string&& message)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
 
-        const auto timestamp = nowIso8601();
+        const auto timestamp = Time::GetDateAndTime();
         const auto lvl = LogName(level);
         const auto color = LogColor(level);
 
