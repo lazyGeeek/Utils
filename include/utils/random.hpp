@@ -1,19 +1,22 @@
 #pragma once
-#ifndef UTILS_RANDOM_HPP_
-#define UTILS_RANDOM_HPP_
-
 #include <random>
 
 namespace Utils
 {
-    class Random
+    template <std::floating_point T>
+    T GetRandom(T min, T max)
     {
-    public:
-        Random() = delete;
+        static thread_local std::mt19937 rng(std::random_device {}());
+        std::uniform_real_distribution<T> dist(min, max);
+        return dist(rng);
+    }
 
-        static int GetInt(int min, int max);
-        static float GetFloat(float min, float max);
-    };
-}
+    template <std::integral T>
+    T GetRandom(T min, T max)
+    {
+        static thread_local std::mt19937 rng(std::random_device {}());
+        std::uniform_int_distribution<T> dist(min, max);
+        return dist(rng);
+    }
+} // namespace Utils
 
-#endif // UTILS_RANDOM_HPP_
